@@ -1,2 +1,2 @@
 # GOL
-The game of life, the playing field in which is divided into two parts and is processed by two separate threads. The SDL library is used to render elements
+В данном репозитории реализована игра "Жизнь", игровое поле разделено на две части, каждая полопвина вычисляется и отрисовывается в отдельном потоке. Для отрисовки используется библиотека SDL
