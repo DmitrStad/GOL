@@ -1,3 +1,14 @@
+/**
+  ******************************************************************************
+  * @file    Source.cpp
+  * @author  Dmitriy Stadnyuk
+  * @version V1.0.0
+  * @date    03.07.2023
+  * @brief   Игры "Жизнь" реализованная с помощью графической библиоткеи SDL 
+  *			 Расчёт и отрисовка двух полей происходит в разных потоках
+  ******************************************************************************
+  */
+
 #pragma once
 #include <iostream>
 #include <ctime>
@@ -9,12 +20,12 @@
 #undef min
 #undef max
 
-// color definition
+// задаём цвета
 #define OFF_COLOUR 0x00
 #define ON_COLOUR 0xEE
 #define ALIVE_COLOUR 0x00FF00
 
-// Limit loop rate for visibility
+// задаём предел частоты обновления экрана
 #define LIMIT_RATE 0
 // Tick-rate in milliseconds (if LIMIT_RATE == 1)
 #define TICK_RATE 25
@@ -26,8 +37,7 @@ struct Cell_State {
 	signed int neihbours_counter ;
 };
 
-// Structure for dividing the screen into two parts
-struct DrawData {
+// Структура, делящая экран на две части {
 	DrawData(unsigned int height, unsigned int width, unsigned int start_x, unsigned int start_y, unsigned int del);
 	 unsigned int height;
 	 unsigned int width;
@@ -36,7 +46,7 @@ struct DrawData {
 	 unsigned int del;
 };
 
-
+// Структура, содержащая матрицы клеток
 struct Matrix {
 	Matrix(unsigned int height, unsigned int width);
 	~Matrix();
@@ -50,7 +60,11 @@ void Print_Matrix(Matrix& Matrix, DrawData& DrawMap);
 void Next_Generation(Matrix& Matrix, DrawData& DrawMap, Cell_State& info);
 Cell_State& Neighbours_Count(Matrix& Matrix, Cell_State& info, DrawData& DrawMap, const int x, const int y);
 
-
+/**
+  * @brief  Основная программа
+  * @param  int argc - количество аргументов при запуске приложения из командной строки, char* argv[] - значения этих аргументов
+  * @retval None
+  */
 
 int main(int argc, char* argv[]) {
 
@@ -58,14 +72,14 @@ int main(int argc, char* argv[]) {
 	srand(time(NULL));
 	unsigned int height = 20, width = 30;
 
-	//divide the screen into two parts
+	//Делим экран на две части
 	DrawData DrawMap_1(height, width/2, 0, 0, 2);
 	DrawData DrawMap_2(height, width, 0, width / 2, 2);
 	Matrix Matrix(height, width);
 	Cell_State info_1;
 	Cell_State info_2;
 
-	//surface creation for SDL
+	//создаём поверхность для SDL
 	SDL_Init(SDL_INIT_VIDEO);
 	window = SDL_CreateWindow("GAME ", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width*width, height*height, SDL_WINDOW_SHOWN);
 	surface = SDL_GetWindowSurface(window);
@@ -78,7 +92,7 @@ int main(int argc, char* argv[]) {
 	std::condition_variable cv1;
 	std::condition_variable cv2;
 
-	//distribution of functions by streams for both halves of the screen
+	//функции для обработки половин экранамв разных потоках
 	std::thread left_thread([&Matrix, &DrawMap_1, &info_1, &running1, &mutex1, &cv1]() {
 		while (running1) {
 			{
@@ -122,6 +136,16 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
+/**
+  * @brief  Конструктор структуры Drawdata
+  * @param  unsigned int height - высота отрисовки поля
+  * @param  unsigned int height - ширина отрисовки поля
+  * @param  unsigned int start_x - начальное значение по оси Ox, с которого отрисовывается поле
+  * @param  unsigned int start_y - начальное значение по оси Oy, с которого отрисовывается поле
+  * @param  unsigned int del - величина, введённая для корректной отрисовки поля
+  * @retval None
+  */
+
 DrawData::DrawData(unsigned int height, unsigned int width, unsigned int start_x, unsigned int start_y, unsigned int del) {
 	this->start_x = start_x;
 	this->start_y = start_y;
@@ -132,6 +156,13 @@ DrawData::DrawData(unsigned int height, unsigned int width, unsigned int start_x
 		this->del = del;
 	this->width = width;
 }
+
+/**
+  * @brief  Конструктор структуры Matrix
+  * @param  unsigned int height - высота отрисовки всего экрана
+  * @param  unsigned int height - ширина отрисовки всего экрана
+  * @retval None
+  */
 
 Matrix::Matrix(unsigned int height, unsigned int width) {
 	this->height = height;
@@ -148,6 +179,12 @@ Matrix::Matrix(unsigned int height, unsigned int width) {
 		temp_matrix[i] = new bool[width];
 }
 
+/**
+  * @brief  Деструктор структуры Matrix
+  * @param  None
+  * @retval None
+  */
+
 Matrix:: ~Matrix() {
 	for (unsigned int i = 0; i < height; i++)
 		delete[] matrix[i];
@@ -157,7 +194,13 @@ Matrix:: ~Matrix() {
 	delete[] temp_matrix;
 }
 
-//display field on the screen
+/**
+  * @brief  Функция отрисовки экрана
+  * @param  Matrix& Matrix - ссылка на созданную структуру экрана
+  * @param  DrawData& DrawMap - ссылка на созданную структуру отдельно взятой половины экрана
+  * @retval None
+  */
+
 void Print_Matrix(Matrix& Matrix, DrawData& DrawMap) {
 	SDL_FillRect(surface, NULL, OFF_COLOUR);
 	int count = 0;
@@ -180,7 +223,13 @@ void Print_Matrix(Matrix& Matrix, DrawData& DrawMap) {
 	
 }
 
-//next generation computing
+/**
+  * @brief  Вычисление значения следующего поколения клеток
+  * @param  Matrix& Matrix - ссылка на созданную структуру экрана
+  * @param  DrawData& DrawMap - ссылка на созданную структуру отдельно взятой половины экрана
+  * @param  Cell_State& info - ссылка на структуру, содержащую значение клетки 
+  * @retval None
+  */
 void Next_Generation(Matrix& Matrix, DrawData& DrawMap, Cell_State& info) {
 
 	memcpy(Matrix.temp_matrix, Matrix.matrix, sizeof(bool) * Matrix.height * Matrix.width);
@@ -203,7 +252,16 @@ void Next_Generation(Matrix& Matrix, DrawData& DrawMap, Cell_State& info) {
 
 }
 
-//calculation of the neighbors of each cell
+/**
+  * @brief  Вычисление значений соседей клетки
+  * @param  Matrix& Matrix - ссылка на созданную структуру экрана
+  * @param  DrawData& DrawMap - ссылка на созданную структуру отдельно взятой половины экрана
+  * @param  Cell_State& info - ссылка на структуру, содержащую значение клетки
+  * @param  const int x - координата x клетки 
+  * @param  const int y - координата y клетки 
+  * @retval Cell_State& - значение вычисляемой клетки
+  */
+
 Cell_State& Neighbours_Count(Matrix& Matrix, Cell_State& info, DrawData& DrawMap, const int x, const int y) {
 	info.neihbours_counter = 0;
 	const int height = DrawMap.height;
